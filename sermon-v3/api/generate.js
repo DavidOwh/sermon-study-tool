@@ -9,7 +9,7 @@ export default async function handler(req) {
   if (!prompt) return new Response('No prompt', { status: 400 });
 
   const apiKey = process.env.GEMINI_API_KEY;
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:streamGenerateContent?alt=sse&key=${apiKey}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
 
   const geminiRes = await fetch(url, {
     method: 'POST',
@@ -22,42 +22,22 @@ export default async function handler(req) {
 
   if (!geminiRes.ok) {
     const err = await geminiRes.text();
-    return new Response(`data: ${JSON.stringify({ error: err })}\n\n`, {
+    return new Response(`data: ${JSON.stringify({ error: err })}\n\ndata: [DONE]\n\n`, {
       headers: { 'Content-Type': 'text/event-stream' }
     });
   }
 
-  const encoder = new TextEncoder();
-  const decoder = new TextDecoder();
+  const result = await geminiRes.json();
+  const text = result?.candidates?.[0]?.content?.parts?.[0]?.text || 'No response from Gemini.';
 
+  const encoder = new TextEncoder();
+  const chunkSize = 100;
   const readable = new ReadableStream({
     async start(controller) {
-      const reader = geminiRes.body.getReader();
-      let buffer = '';
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n');
-        buffer = lines.pop();
-
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            const data = line.slice(6).trim();
-            if (!data || data === '[DONE]') continue;
-            try {
-              const parsed = JSON.parse(data);
-              const text = parsed?.candidates?.[0]?.content?.parts?.[0]?.text;
-              if (text) {
-                controller.enqueue(encoder.encode(`data: ${JSON.stringify({ text })}\n\n`));
-              }
-            } catch(e) {}
-          }
-        }
+      for (let i = 0; i < text.length; i += chunkSize) {
+        const chunk = text.slice(i, i + chunkSize);
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify({ text: chunk })}\n\n`));
       }
-
       controller.enqueue(encoder.encode('data: [DONE]\n\n'));
       controller.close();
     }
