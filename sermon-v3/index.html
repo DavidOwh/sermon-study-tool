@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>讲道研经工具 Sermon Study Tool</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&family=Noto+Sans+SC:wght@300;400;500&family=Crimson+Pro:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --gold: #C9A84C;
+    --gold-light: #E8C97A;
+    --gold-dim: #8a6f2e;
+    --ink: #1a1610;
+    --parchment: #F7F2E8;
+    --parchment-dark: #EDE5D0;
+    --border: rgba(201,168,76,0.25);
+    --border-strong: rgba(201,168,76,0.5);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--ink);
+    color: var(--parchment);
+    font-family: 'Noto Sans SC', sans-serif;
+    font-weight: 300;
+    min-height: 100vh;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse at 20% 20%, rgba(201,168,76,0.06) 0%, transparent 60%),
+      radial-gradient(ellipse at 80% 80%, rgba(26,92,82,0.08) 0%, transparent 60%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    position: relative;
+    z-index: 1;
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 48px 24px 80px;
+  }
+
+  header { text-align: center; margin-bottom: 48px; }
+
+  .header-eyebrow {
+    font-family: 'Crimson Pro', serif;
+    font-style: italic;
+    color: var(--gold);
+    font-size: 14px;
+    letter-spacing: 0.12em;
+    margin-bottom: 12px;
+    opacity: 0.85;
+  }
+
+  h1 {
+    font-family: 'Noto Serif SC', serif;
+    font-weight: 700;
+    font-size: clamp(22px, 4vw, 32px);
+    color: var(--parchment);
+    line-height: 1.3;
+    margin-bottom: 8px;
+  }
+
+  .header-sub {
+    font-family: 'Crimson Pro', serif;
+    font-size: 16px;
+    color: var(--gold-light);
+    opacity: 0.7;
+  }
+
+  .divider {
+    width: 80px;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--gold), transparent);
+    margin: 20px auto;
+  }
+
+  .input-card {
+    background: rgba(247,242,232,0.04);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 28px;
+    margin-bottom: 28px;
+  }
+
+  .input-label {
+    font-size: 11px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 10px;
+    display: block;
+  }
+
+  textarea {
+    width: 100%;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--parchment);
+    font-family: 'Noto Serif SC', serif;
+    font-size: 15px;
+    line-height: 1.8;
+    padding: 16px;
+    resize: vertical;
+    min-height: 140px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  textarea::placeholder { color: rgba(247,242,232,0.25); font-style: italic; }
+  textarea:focus { border-color: var(--border-strong); }
+
+  .ref-row { display: flex; gap: 12px; margin-top: 14px; }
+
+  .ref-row input {
+    flex: 1;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--parchment);
+    font-family: 'Noto Sans SC', sans-serif;
+    font-size: 14px;
+    padding: 10px 14px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .ref-row input::placeholder { color: rgba(247,242,232,0.25); }
+  .ref-row input:focus { border-color: var(--border-strong); }
+
+  .selector-label {
+    font-size: 11px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 14px;
+    display: block;
+  }
+
+  .output-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 10px;
+    margin-bottom: 28px;
+  }
+
+  .output-btn {
+    background: rgba(247,242,232,0.03);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--parchment);
+    font-family: 'Noto Sans SC', sans-serif;
+    font-size: 13px;
+    padding: 12px 14px;
+    cursor: pointer;
+    transition: all 0.18s;
+    text-align: left;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  .output-btn:hover { border-color: var(--border-strong); background: rgba(201,168,76,0.06); }
+  .output-btn.active { border-color: var(--gold); background: rgba(201,168,76,0.1); color: var(--gold-light); }
+
+  .btn-icon { font-size: 16px; margin-bottom: 4px; }
+  .btn-title { font-weight: 500; font-size: 13px; }
+  .btn-desc { font-size: 11px; color: rgba(247,242,232,0.45); line-height: 1.4; }
+
+  .generate-btn {
+    width: 100%;
+    background: linear-gradient(135deg, var(--gold-dim), var(--gold));
+    border: none;
+    border-radius: 8px;
+    color: var(--ink);
+    font-family: 'Noto Serif SC', serif;
+    font-weight: 700;
+    font-size: 15px;
+    padding: 16px;
+    cursor: pointer;
+    letter-spacing: 0.05em;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+  }
+
+  .generate-btn:hover { filter: brightness(1.08); transform: translateY(-1px); }
+  .generate-btn:active { transform: translateY(0); }
+  .generate-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+  .output-area { margin-top: 36px; display: none; }
+  .output-area.visible { display: block; }
+
+  .output-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+
+  .output-tag {
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink);
+    background: var(--gold);
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-weight: 500;
+  }
+
+  .output-passage-name {
+    font-family: 'Crimson Pro', serif;
+    font-style: italic;
+    color: var(--gold-light);
+    font-size: 16px;
+  }
+
+  .output-content {
+    background: rgba(247,242,232,0.04);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 32px;
+    font-family: 'Noto Serif SC', serif;
+    font-size: 15px;
+    line-height: 2;
+    color: var(--parchment);
+    min-height: 120px;
+  }
+
+  .output-content h1 {
+    font-family: 'Noto Serif SC', serif;
+    color: var(--gold-light);
+    font-size: 20px;
+    font-weight: 700;
+    margin: 20px 0 10px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 8px;
+  }
+
+  .output-content h2 {
+    font-family: 'Noto Serif SC', serif;
+    color: var(--gold-light);
+    font-size: 17px;
+    font-weight: 600;
+    margin: 18px 0 8px;
+  }
+
+  .output-content h3 {
+    color: var(--parchment);
+    font-size: 15px;
+    font-weight: 600;
+    margin: 14px 0 6px;
+  }
+
+  .output-content strong { color: var(--gold-light); font-weight: 600; }
+  .output-content em { color: rgba(247,242,232,0.75); }
+  .output-content hr { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
+  .output-content p { margin-bottom: 12px; }
+
+  .loading-bar {
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--gold), transparent);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+    border-radius: 2px;
+    margin-bottom: 20px;
+    display: none;
+  }
+
+  .loading-bar.visible { display: block; }
+
+  @keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+
+  .status-text {
+    font-size: 12px;
+    color: var(--gold);
+    letter-spacing: 0.08em;
+    margin-bottom: 14px;
+    opacity: 0.8;
+    min-height: 18px;
+  }
+
+  .copy-btn {
+    margin-top: 16px;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: rgba(247,242,232,0.5);
+    font-family: 'Noto Sans SC', sans-serif;
+    font-size: 12px;
+    padding: 8px 16px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .copy-btn:hover { border-color: var(--border-strong); color: var(--parchment); }
+
+  .footer-note {
+    text-align: center;
+    margin-top: 60px;
+    font-family: 'Crimson Pro', serif;
+    font-style: italic;
+    font-size: 13px;
+    color: rgba(247,242,232,0.25);
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <div class="header-eyebrow">Pastor Owh Wee Kiang · 侯伟强传道</div>
+    <h1>讲道研经工具</h1>
+    <div class="header-sub">Sermon Study Tool · Powered by Claude AI</div>
+    <div class="divider"></div>
+  </header>
+
+  <div class="input-card">
+    <label class="input-label">粘贴经文 · Paste your passage</label>
+    <textarea id="passage-text" placeholder="在此粘贴经文内容... 例如：因我们在基督耶稣里同为后嗣，同为一体，同蒙应许。（以弗所书3:6）"></textarea>
+    <div class="ref-row">
+      <input type="text" id="passage-ref" placeholder="经文参考 · e.g. 以弗所书 3:1-13" />
+    </div>
+  </div>
+
+  <div>
+    <span class="selector-label">选择输出类型 · Choose output type</span>
+    <div class="output-grid" id="output-grid"></div>
+  </div>
+
+  <button class="generate-btn" id="generate-btn" onclick="generate()">
+    <span>✦</span>
+    <span>生成 · Generate</span>
+  </button>
+
+  <div class="output-area" id="output-area">
+    <div class="output-header">
+      <span class="output-tag" id="output-tag">讲道大纲</span>
+      <span class="output-passage-name" id="output-passage-name"></span>
+    </div>
+    <div class="loading-bar" id="loading-bar"></div>
+    <div class="status-text" id="status-text"></div>
+    <div class="output-content" id="output-content"></div>
+    <button class="copy-btn" onclick="copyOutput()">复制内容 · Copy</button>
+  </div>
+
+  <div class="footer-note">
+    裕廊植堂 · Jurong Church Plant · Church of Our Saviour Singapore
+  </div>
+
+</div>
+
+<script>
+const OUTPUT_TYPES = [
+  {
+    id: 'sermon_outline', icon: '📋', title: '讲道大纲', desc: '3-point sermon outline',
+    prompt: (p, r) => `You are helping Pastor Owh Wee Kiang (侯伟强传道), a bilingual Chinese church pastor in Singapore. Congregation aged 30-80, Simplified Chinese speaking. Singapore context always.\n\nGenerate a 3-point sermon outline in Simplified Chinese for:\nPassage reference: ${r}\nPassage text: ${p}\n\nFormat:\n- Suggested sermon title (Chinese and English)\n- 3 main points each with: point title, key verse, core truth (核心真理), brief Singapore-life application\n- Brief closing response suggestion\n\nWarm pastoral tone. No dashes in sentences.`
+  },
+  {
+    id: 'flow_diagram', icon: '🗺️', title: '讲道流程图', desc: 'Sermon structure flow map',
+    prompt: (p, r) => `You are helping Pastor Owh Wee Kiang, a Singapore Chinese church pastor.\n\nPassage: ${r}\nText: ${p}\n\nCreate a clear TEXT-BASED sermon flow map in Simplified Chinese:\n1. Passage overview (1 sentence)\n2. Three points with arrows: Point 1 → Point 2 → Point 3\n3. Key verse for each point\n4. Core truth (核心真理) for each\n5. Singapore-life application for each\n6. Closing response and prayer direction\n\nUse simple ASCII art with → and │ to show flow. Clean and readable. No dashes in sentences.`
+  },
+  {
+    id: 'word_study', icon: '📖', title: '字词研究', desc: 'Greek/Hebrew word study',
+    prompt: (p, r) => `You are helping Pastor Owh Wee Kiang, a Singapore Chinese church pastor.\n\nPassage: ${r}\nText: ${p}\n\nProduce a structured word study in Simplified Chinese:\n1. 3-5 most important Greek or Hebrew words\n2. For each: original term, transliteration, morphological form, root meaning, range of meaning, usage elsewhere in Scripture, theological significance, preaching implication\n3. Word relationships: contrasting pairs or semantic connections\n4. Summary: what does this word study reveal for preaching?\n\nNo dashes in sentences.`
+  },
+  {
+    id: 'illustrations', icon: '🎭', title: '新加坡例子', desc: '5 local Singapore illustrations',
+    prompt: (p, r) => `You are helping Pastor Owh Wee Kiang, a Singapore Chinese church pastor. Congregation aged 30-80.\n\nPassage: ${r}\nText: ${p}\n\nGenerate 5 funny and relatable local Singapore story illustrations connected to this passage. Each must:\n- Be set in Singapore daily life: HDB, MRT, hawker centre, kopitiam, void deck, family dinner, neighbourhood park\n- Include light gentle humour\n- Have 3-part structure: Setup, Complication, Point (connecting to the passage)\n- End with a one-sentence bridge back to Scripture\n\nSimplified Chinese. Warm tone. No dashes in sentences.`
+  },
+  {
+    id: 'application', icon: '✋', title: '生活应用', desc: 'Thinking, speaking, doing table',
+    prompt: (p, r) => `You are helping Pastor Owh Wee Kiang, a Singapore Chinese church pastor.\n\nPassage: ${r}\nText: ${p}\n\nCreate a practical application table in Simplified Chinese with 5 applications:\nFor each provide: verse reference, THINKING (how to think differently), SPEAKING (what to say or stop saying), DOING (specific Singapore daily life action), cross reference.\n\nApplications must be specific to Singapore life. No generic statements.\nAdd a short pastoral closing note (3-5 sentences) for inviting response.\nNo dashes in sentences.`
+  },
+  {
+    id: 'prayer_prompts', icon: '🙏', title: '祷告引导', desc: "8 prayers on Lord's Prayer",
+    prompt: (p, r) => `You are helping Pastor Owh Wee Kiang, a Singapore Chinese church pastor, with devotional preparation.\n\nPassage: ${r}\nText: ${p}\n\nGenerate 8 devotional prayer prompts based on the Lord's Prayer framework:\n1. Adoration (愿人都尊你的名为圣)\n2. Kingdom Focus (愿你的国降临)\n3. Surrender (愿你的旨意行在地上)\n4. Dependence (我们日用的饮食)\n5. Confession (免我们的债)\n6. Forgiveness Extended (如同我们免了人的债)\n7. Protection (不叫我们遇见试探)\n8. Preacher's Prayer (special prayer for Pastor David before preaching)\n\nEach as a full sentence to pray aloud, connected to the passage.\nAll Simplified Chinese. Each prayer ends with: 奉主耶稣的名祷告，阿们。`
+  },
+  {
+    id: 'theological', icon: '⛪', title: '神学主题', desc: 'Ranked against 13 biblical themes',
+    prompt: (p, r) => `You are helping Pastor Owh Wee Kiang, a Singapore Chinese church pastor.\n\nPassage: ${r}\nText: ${p}\n\nAnalyse this passage against the 13 great theological themes. Rank by relevance:\n1.Scripture/Bibliology 2.God the Father 3.Christology 4.Pneumatology 5.Creation 6.Angelology 7.Demonology 8.Anthropology 9.Hamartiology 10.Soteriology 11.Israelology 12.Ecclesiology 13.Eschatology\n\nFor each relevant theme: ranking, specific verses, 2-3 sentence explanation, preaching implication for Singapore congregation.\nEnd with summary of primary theological emphasis and top 2-3 backbone themes.\n\nSimplified Chinese. No dashes in sentences.`
+  },
+  {
+    id: 'cell_group', icon: '👥', title: '小组查经', desc: 'Cell group discussion guide',
+    prompt: (p, r) => `You are helping Pastor Owh Wee Kiang, a Singapore Chinese church pastor.\n\nPassage: ${r}\nText: ${p}\n\nCreate a complete cell group discussion guide in Simplified Chinese:\n1. ICE BREAKER (破冰问题): 1 fun light question related to the theme\n2. OBSERVATION (观察): 3 questions about what the text says\n3. INTERPRETATION (解释): 3 questions about what the text means\n4. APPLICATION (应用): 3 questions applying to Singapore life\n5. PRAYER DIRECTION (祷告方向): 2-3 prayer focus points\n\nWarm conversational tone. Suitable for adults aged 30-80. No dashes in sentences.`
+  }
+];
+
+let selectedType = 'sermon_outline';
+
+function renderButtons() {
+  const grid = document.getElementById('output-grid');
+  grid.innerHTML = '';
+  OUTPUT_TYPES.forEach(type => {
+    const btn = document.createElement('button');
+    btn.className = 'output-btn' + (type.id === selectedType ? ' active' : '');
+    btn.innerHTML = `<span class="btn-icon">${type.icon}</span><span class="btn-title">${type.title}</span><span class="btn-desc">${type.desc}</span>`;
+    btn.onclick = () => { selectedType = type.id; renderButtons(); };
+    grid.appendChild(btn);
+  });
+}
+
+function formatOutput(text) {
+  return text
+    .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+    .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+    .replace(/^# (.+)$/gm, '<h1>$1</h1>')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+    .replace(/^---$/gm, '<hr>')
+    .replace(/\n/g, '<br>');
+}
+
+async function generate() {
+  const passageText = document.getElementById('passage-text').value.trim();
+  const passageRef = document.getElementById('passage-ref').value.trim();
+  if (!passageText) { alert('请先粘贴经文内容 Please paste your passage first.'); return; }
+
+  const type = OUTPUT_TYPES.find(t => t.id === selectedType);
+  const btn = document.getElementById('generate-btn');
+  const outputArea = document.getElementById('output-area');
+  const outputContent = document.getElementById('output-content');
+  const loadingBar = document.getElementById('loading-bar');
+  const statusText = document.getElementById('status-text');
+
+  btn.disabled = true;
+  outputArea.classList.add('visible');
+  outputContent.innerHTML = '';
+  loadingBar.classList.add('visible');
+  statusText.textContent = '正在分析经文... Analysing passage...';
+  document.getElementById('output-tag').textContent = type.title;
+  document.getElementById('output-passage-name').textContent = passageRef || '经文 Passage';
+
+  try {
+    const response = await fetch('/api/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt: type.prompt(passageText, passageRef || '经文') })
+    });
+
+    if (!response.ok) throw new Error('Server error: ' + response.status);
+
+    statusText.textContent = '生成中... Generating...';
+    loadingBar.classList.remove('visible');
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let fullText = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      const chunk = decoder.decode(value, { stream: true });
+      const lines = chunk.split('\n');
+      for (const line of lines) {
+        if (line.startsWith('data: ')) {
+          const data = line.slice(6).trim();
+          if (data === '[DONE]') continue;
+          try {
+            const parsed = JSON.parse(data);
+            if (parsed.text) {
+              fullText += parsed.text;
+              outputContent.innerHTML = formatOutput(fullText);
+            }
+            if (parsed.error) throw new Error(parsed.error);
+          } catch(e) { if (e.message !== 'Unexpected end of JSON input') throw e; }
+        }
+      }
+    }
+
+    statusText.textContent = '完成 Complete ✦';
+    setTimeout(() => { statusText.textContent = ''; }, 3000);
+
+  } catch (err) {
+    loadingBar.classList.remove('visible');
+    statusText.textContent = '';
+    outputContent.innerHTML = `<em style="color:rgba(247,242,232,0.4)">Error: ${err.message}</em>`;
+  }
+
+  btn.disabled = false;
+}
+
+function copyOutput() {
+  const content = document.getElementById('output-content').innerText;
+  navigator.clipboard.writeText(content).then(() => {
+    const btn = document.querySelector('.copy-btn');
+    btn.textContent = '已复制 Copied ✓';
+    setTimeout(() => { btn.textContent = '复制内容 · Copy'; }, 2000);
+  });
+}
+
+renderButtons();
+</script>
+</body>
+</html>
